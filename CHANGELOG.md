@@ -14,6 +14,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [0.6.3] - 2026-03-02
+
+### Added
+
+- feat: add folder exclusion support with exact path matching and subfolders
+- feat: add regex pattern matching for excluding folders from sync operations
+- feat: add regex pattern matching for excluding files by filename from sync operations
+- feat: add "Exclusions" section to settings tab with text areas for configuring exclusion rules
+- feat: excluded files are skipped during manual sync, auto-trigger sync, and bulk folder sync
+
 ## [0.6.0] - 2025-11-14
 
 ### Changes

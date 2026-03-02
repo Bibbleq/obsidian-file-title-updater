@@ -43,6 +43,7 @@ The plugin includes several intelligent features:
 - **Customizable sync targets**: Choose which title locations to sync (all three, or any pair of two)
 - **Customizable frontmatter field**: Use any frontmatter field name for the title instead of just "title"
 - **Alias preservation**: Optionally add old filename as an alias when renaming, preserving backlinks and link display text
+- **File and folder exclusions**: Exclude specific folders by path and files/folders by regex patterns to prevent template files and other special content from being renamed
 - **Detects already synchronized titles**: If all titles that should be synced are already the same, the plugin will notify you and skip unnecessary updates
 - **Proper spacing**: Ensures exactly one empty line between frontmatter and the first heading
 - **Handles edge cases**: Properly creates first headings when none exist and provides helpful error messages
