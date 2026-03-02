@@ -60,6 +60,12 @@ export interface PluginSettings {
      * Options: "all" (show all notifications), "errors" (errors only), "none" (no notifications)
      */
     mobileNotificationPreference: "all" | "errors" | "none" | null;
+    /**
+     * Automatically sync titles when switching away from a file (focus change).
+     * Uses the active-leaf-change event to sync the file you were previously editing.
+     * This syncs heading→filename on the file being left, complementing the manual commands.
+     */
+    useFocusChangeHook: boolean;
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -74,4 +80,5 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     useOldFilenameAsDisplayText: false,
     notificationPreference: "all",
     mobileNotificationPreference: null,
+    useFocusChangeHook: false, // Off by default to avoid surprises
 };
