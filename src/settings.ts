@@ -66,6 +66,24 @@ export interface PluginSettings {
      * This syncs heading→filename on the file being left, complementing the manual commands.
      */
     useFocusChangeHook: boolean;
+    /**
+     * List of folder paths to exclude from sync operations.
+     * Exact path matching. Files in these folders (and their subfolders) will be skipped.
+     * One folder path per line. Example: "Templates", "Archive/Old"
+     */
+    excludedFolders: string[];
+    /**
+     * Regex patterns to match against folder paths for exclusion.
+     * Files in matching folders (and their subfolders) will be skipped.
+     * One pattern per line. Example: "^Templates", ".*\/archive$"
+     */
+    excludedFolderPatterns: string[];
+    /**
+     * Regex patterns to match against filenames (without extension) for exclusion.
+     * Matching files will be skipped during sync operations.
+     * One pattern per line. Example: "^Template -", "^_"
+     */
+    excludedFilePatterns: string[];
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -81,4 +99,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     notificationPreference: "all",
     mobileNotificationPreference: null,
     useFocusChangeHook: false, // Off by default to avoid surprises
+    excludedFolders: [],
+    excludedFolderPatterns: [],
+    excludedFilePatterns: [],
 };

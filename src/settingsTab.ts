@@ -171,6 +171,68 @@ export class SettingsTab extends PluginSettingTab {
                     }),
             );
 
+        new Setting(containerEl).setName("Exclusions").setHeading();
+
+        new Setting(containerEl)
+            .setName("Excluded folders")
+            .setDesc(
+                "Folder paths to exclude from sync operations. Files in these folders and their subfolders will be skipped. Enter one folder path per line (e.g., 'Templates', 'Archive/Old').",
+            )
+            .addTextArea((text) =>
+                text
+                    .setPlaceholder("Templates\nArchive/Old")
+                    .setValue(
+                        this.plugin.settings.excludedFolders.join("\n"),
+                    )
+                    .onChange(async (value) => {
+                        this.plugin.settings.excludedFolders = value
+                            .split("\n")
+                            .map((line) => line.trim())
+                            .filter((line) => line.length > 0);
+                        await this.plugin.saveSettings();
+                    }),
+            );
+
+        new Setting(containerEl)
+            .setName("Excluded folder patterns (regex)")
+            .setDesc(
+                "Regex patterns to match folder paths for exclusion. Files in matching folders will be skipped. Enter one pattern per line (e.g., '^Templates', '.*\\/archive$').",
+            )
+            .addTextArea((text) =>
+                text
+                    .setPlaceholder("^Templates\n.*\\/archive$")
+                    .setValue(
+                        this.plugin.settings.excludedFolderPatterns.join("\n"),
+                    )
+                    .onChange(async (value) => {
+                        this.plugin.settings.excludedFolderPatterns = value
+                            .split("\n")
+                            .map((line) => line.trim())
+                            .filter((line) => line.length > 0);
+                        await this.plugin.saveSettings();
+                    }),
+            );
+
+        new Setting(containerEl)
+            .setName("Excluded file patterns (regex)")
+            .setDesc(
+                "Regex patterns to match filenames (without extension) for exclusion. Matching files will be skipped during sync. Enter one pattern per line (e.g., '^Template -', '^_').",
+            )
+            .addTextArea((text) =>
+                text
+                    .setPlaceholder("^Template -\n^_")
+                    .setValue(
+                        this.plugin.settings.excludedFilePatterns.join("\n"),
+                    )
+                    .onChange(async (value) => {
+                        this.plugin.settings.excludedFilePatterns = value
+                            .split("\n")
+                            .map((line) => line.trim())
+                            .filter((line) => line.length > 0);
+                        await this.plugin.saveSettings();
+                    }),
+            );
+
         new Setting(containerEl).setName("Illegal characters").setHeading();
 
         new Setting(containerEl)

@@ -347,10 +347,71 @@ export default class FileTitleUpdaterPlugin extends Plugin {
         this.syncTitles(this.settings.defaultTitleSource);
     }
 
+    /**
+     * Determines if a file should be excluded from sync operations.
+     * Checks exact folder path matches, folder regex patterns, and file regex patterns.
+     */
+    isFileExcluded(file: TFile): boolean {
+        const folderPath = file.parent ? file.parent.path : "";
+
+        // Check exact folder path matches (also covers subfolders)
+        for (const excluded of this.settings.excludedFolders) {
+            const trimmed = excluded.trim();
+            if (!trimmed) continue;
+            if (
+                folderPath === trimmed ||
+                folderPath.startsWith(trimmed + "/")
+            ) {
+                return true;
+            }
+        }
+
+        // Check folder regex patterns
+        for (const pattern of this.settings.excludedFolderPatterns) {
+            const trimmed = pattern.trim();
+            if (!trimmed) continue;
+            try {
+                if (new RegExp(trimmed).test(folderPath)) {
+                    return true;
+                }
+            } catch (e) {
+                console.error(
+                    `Invalid folder exclusion regex pattern "${trimmed}":`,
+                    e,
+                );
+            }
+        }
+
+        // Check file regex patterns (against basename without extension)
+        for (const pattern of this.settings.excludedFilePatterns) {
+            const trimmed = pattern.trim();
+            if (!trimmed) continue;
+            try {
+                if (new RegExp(trimmed).test(file.basename)) {
+                    return true;
+                }
+            } catch (e) {
+                console.error(
+                    `Invalid file exclusion regex pattern "${trimmed}":`,
+                    e,
+                );
+            }
+        }
+
+        return false;
+    }
+
     async syncTitles(source: TitleSource) {
         const activeFile = this.app.workspace.getActiveFile();
         if (!activeFile) {
             this.notificationHelper.showError("No active file");
+            return;
+        }
+
+        if (this.isFileExcluded(activeFile)) {
+            this.notificationHelper.showInfo(
+                "This file is excluded from sync",
+            );
             return;
         }
 
@@ -392,6 +453,10 @@ export default class FileTitleUpdaterPlugin extends Plugin {
      */
     async syncTitlesForFile(file: TFile) {
         try {
+            if (this.isFileExcluded(file)) {
+                return; // File is excluded, skip silently
+            }
+
             if (await this.areTitlesToSyncAlreadySynchronized(file)) {
                 return; // Already in sync, nothing to do
             }
@@ -520,7 +585,7 @@ export default class FileTitleUpdaterPlugin extends Plugin {
         // Recursively traverse the folder and collect all markdown files
         const traverse = (currentFolder: TFolder) => {
             for (const child of currentFolder.children) {
-                if (child instanceof TFile && child.extension === "md") {
+                if (child instanceof TFile && child.extension === "md" && !this.isFileExcluded(child)) {
                     markdownFiles.push(child);
                 } else if (child instanceof TFolder) {
                     traverse(child);
