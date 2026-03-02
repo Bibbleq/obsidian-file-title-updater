@@ -152,6 +152,25 @@ export class SettingsTab extends PluginSettingTab {
             preserveDisplayTextSetting.settingEl.style.display = "none";
         }
 
+        new Setting(containerEl).setName("Auto-trigger").setHeading();
+
+        new Setting(containerEl)
+            .setName("Sync on focus change")
+            .setDesc(
+                "Automatically sync titles when switching away from a file. " +
+                "Uses the default title source to sync the file you were " +
+                "previously editing. This complements the manual sync commands " +
+                "by catching changes before you navigate away.",
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.useFocusChangeHook)
+                    .onChange(async (value) => {
+                        this.plugin.settings.useFocusChangeHook = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+
         new Setting(containerEl).setName("Illegal characters").setHeading();
 
         new Setting(containerEl)

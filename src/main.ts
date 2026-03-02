@@ -24,6 +24,7 @@ import { BulkUpdateConfirmationModal } from "./confirmationModal";
 export default class FileTitleUpdaterPlugin extends Plugin {
     settings: PluginSettings;
     notificationHelper: NotificationHelper;
+    private lastActiveFile: TFile | null = null;
 
     async onload() {
         await this.loadSettings();
@@ -154,10 +155,48 @@ export default class FileTitleUpdaterPlugin extends Plugin {
                 }
             }),
         );
+
+        // Sync on focus change (Option B: sync the file you're LEAVING)
+        this.registerEvent(
+            this.app.workspace.on("active-leaf-change", (leaf) => {
+                // Process the file we're LEAVING
+                if (this.settings.useFocusChangeHook && this.lastActiveFile) {
+                    const fileToSync = this.lastActiveFile;
+                    // Verify the file still exists in the vault before syncing
+                    const fileStillExists =
+                        this.app.vault.getAbstractFileByPath(fileToSync.path);
+                    if (fileStillExists instanceof TFile) {
+                        this.syncTitlesForFile(fileToSync).catch((error) => {
+                            console.error(
+                                `Error syncing titles on focus change for ${fileToSync.path}:`,
+                                error,
+                            );
+                        });
+                    }
+                }
+
+                // Update tracking to the new file
+                if (leaf?.view instanceof MarkdownView) {
+                    this.lastActiveFile = leaf.view.file;
+                } else {
+                    this.lastActiveFile = null;
+                }
+            }),
+        );
+
+        // Initialize lastActiveFile to whatever is currently open when plugin loads
+        this.app.workspace.onLayoutReady(() => {
+            const activeView =
+                this.app.workspace.getActiveViewOfType(MarkdownView);
+            if (activeView?.file) {
+                this.lastActiveFile = activeView.file;
+            }
+        });
     }
 
     onunload() {
         // Cleanup when the plugin is disabled
+        this.lastActiveFile = null;
     }
 
     async loadSettings() {
@@ -341,6 +380,37 @@ export default class FileTitleUpdaterPlugin extends Plugin {
                 `Error synchronizing titles: ${error.message}`,
             );
             console.error("Error synchronizing titles:", error);
+        }
+    }
+
+    /**
+     * Sync titles for a specific file (used by auto-trigger hooks).
+     * Unlike syncTitles(), this takes a file parameter instead of using the active file,
+     * and operates silently (no success/info notifications) to avoid spamming the user.
+     */
+    async syncTitlesForFile(file: TFile) {
+        try {
+            if (await this.areTitlesToSyncAlreadySynchronized(file)) {
+                return; // Already in sync, nothing to do
+            }
+
+            const source = this.settings.defaultTitleSource;
+            switch (source) {
+                case TitleSource.FILENAME:
+                    await this.syncFromFilename(file);
+                    break;
+                case TitleSource.FRONTMATTER:
+                    await this.syncFromFrontmatter(file);
+                    break;
+                case TitleSource.HEADING:
+                    await this.syncFromHeading(file);
+                    break;
+            }
+        } catch (error) {
+            console.error(
+                `Error during auto-sync for ${file.path}:`,
+                error,
+            );
         }
     }
 
