@@ -294,13 +294,15 @@ export default class FileTitleUpdaterPlugin extends Plugin {
             }
 
             // Update wikilinks in this file
-            await this.app.vault.process(backlinkFile, (content) => {
-                return this.updateWikilinksInContent(
-                    content,
-                    oldFilename,
-                    newFilename,
-                );
-            });
+            const oldContent = await this.app.vault.read(backlinkFile);
+            const newContent = this.updateWikilinksInContent(
+                oldContent,
+                oldFilename,
+                newFilename,
+            );
+            if (oldContent !== newContent) {
+                await this.app.vault.modify(backlinkFile, newContent);
+            }
         }
     }
 
@@ -801,15 +803,17 @@ export default class FileTitleUpdaterPlugin extends Plugin {
     }
 
     async updateFrontmatterAndOrHeading(file: TFile, title: string) {
-        await this.app.vault.process(file, (fileContents) => {
-            return this.updateFileContents(
-                fileContents,
-                title,
-                file,
-                this.shouldSyncFrontmatter(),
-                this.shouldSyncHeading(),
-            );
-        });
+        const oldText = await this.app.vault.read(file);
+        const newText = this.updateFileContents(
+            oldText,
+            title,
+            file,
+            this.shouldSyncFrontmatter(),
+            this.shouldSyncHeading(),
+        );
+        if (oldText !== newText) {
+            await this.app.vault.modify(file, newText);
+        }
     }
 
     // For backward compatibility
