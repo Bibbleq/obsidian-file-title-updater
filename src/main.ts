@@ -758,36 +758,53 @@ export default class FileTitleUpdaterPlugin extends Plugin {
      * according to the user's settings
      */
     sanitizeFilename(title: string): string {
-        // Obsidian doesn't allow these characters in filenames:
-        // / \ : * ? " < > |
-        const illegalCharsRegex = /[\/\\:*?"<>|#^[\]]/g;
+        let result = title;
 
-        // Check if the title contains illegal characters
-        if (!illegalCharsRegex.test(title)) {
-            return title;
+        // PASS 1: Apply user-defined character remappings
+        for (const mapping of this.settings.characterRemappings) {
+            const parts = mapping.split(">>", 2);
+            if (parts.length === 2) {
+                const from = parts[0].trim();
+                const to = parts[1].trim();
+                if (from.length > 0) {
+                    result = result.replaceAll(from, to);
+                }
+            }
         }
 
-        // Handle illegal characters based on user settings
+        // PASS 2: Cross-platform denylist
+        // Windows: < > : " / \ | ? * + control chars (U+0000-U+001F, U+007F)
+        // macOS: / :
+        // Obsidian: # ^ [ ] |
+        // eslint-disable-next-line no-control-regex
+        const illegalCharsRegex = /[<>:"/\\|?*#^[\]\x00-\x1F\x7F]/g;
+
+        // Check if the title contains illegal characters
+        if (!illegalCharsRegex.test(result)) {
+            return result;
+        }
+
+        // PASS 3: Handle remaining illegal characters based on user settings
         switch (this.settings.illegalCharHandling) {
             case IllegalCharacterHandling.REMOVE:
-                return title.replace(illegalCharsRegex, "");
+                return result.replace(illegalCharsRegex, "");
 
             case IllegalCharacterHandling.REPLACE_WITH_SPACE:
-                return title.replace(illegalCharsRegex, " ");
+                return result.replace(illegalCharsRegex, " ");
 
             case IllegalCharacterHandling.REPLACE_WITH_DASH:
-                return title.replace(illegalCharsRegex, "-");
+                return result.replace(illegalCharsRegex, "-");
 
             case IllegalCharacterHandling.REPLACE_WITH_UNDERSCORE:
-                return title.replace(illegalCharsRegex, "_");
+                return result.replace(illegalCharsRegex, "_");
 
             case IllegalCharacterHandling.CUSTOM: {
                 const replacement = this.settings.customReplacement || "";
-                return title.replace(illegalCharsRegex, replacement);
+                return result.replace(illegalCharsRegex, replacement);
             }
 
             default:
-                return title.replace(illegalCharsRegex, "");
+                return result.replace(illegalCharsRegex, "");
         }
     }
 

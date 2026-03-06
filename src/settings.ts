@@ -84,6 +84,14 @@ export interface PluginSettings {
      * One pattern per line. Example: "^Template -", "^_"
      */
     excludedFilePatterns: string[];
+    /**
+     * User-defined character remappings applied before the illegal character denylist.
+     * Each entry uses the format `from >> to` (e.g., `' >> '`).
+     * Allows characters with natural equivalents to be intelligently remapped rather
+     * than removed. Remapped characters that are still illegal will be handled by
+     * the illegalCharHandling setting.
+     */
+    characterRemappings: string[];
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -102,4 +110,13 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     excludedFolders: [],
     excludedFolderPatterns: [],
     excludedFilePatterns: [],
+    characterRemappings: [
+        "\u2018 >> '",
+        "\u2019 >> '",
+        '\u201C >> "',
+        '\u201D >> "',
+        "\u2013 >> -",
+        "\u2014 >> -",
+        "\u2026 >> ...",
+    ],
 };
