@@ -236,6 +236,26 @@ export class SettingsTab extends PluginSettingTab {
         new Setting(containerEl).setName("Illegal characters").setHeading();
 
         new Setting(containerEl)
+            .setName("Character remapping")
+            .setDesc(
+                "Map characters to safe equivalents before applying illegal character handling. One mapping per line using >> as separator (e.g., \u2019 >> '). Remapped characters that are still illegal will be handled by the setting below.",
+            )
+            .addTextArea((text) =>
+                text
+                    .setPlaceholder("\u2019 >> '\n\u2014 >> -\n\u2026 >> ...")
+                    .setValue(
+                        this.plugin.settings.characterRemappings.join("\n"),
+                    )
+                    .onChange(async (value) => {
+                        this.plugin.settings.characterRemappings = value
+                            .split("\n")
+                            .map((line) => line.trim())
+                            .filter((line) => line.length > 0);
+                        await this.plugin.saveSettings();
+                    }),
+            );
+
+        new Setting(containerEl)
             .setName("Illegal characters handling")
             .setDesc(
                 "Choose how to handle illegal characters when updating filenames",
