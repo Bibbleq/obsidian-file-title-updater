@@ -351,7 +351,7 @@ export default class FileTitleUpdaterPlugin extends Plugin {
      * Determines if a file should be excluded from sync operations.
      * Checks exact folder path matches, folder regex patterns, and file regex patterns.
      */
-    isFileExcluded(file: TFile): boolean {
+    getFileExclusionReason(file: TFile): string | null {
         const folderPath = file.parent ? file.parent.path : "";
 
         // Check exact folder path matches (also covers subfolders)
@@ -362,7 +362,7 @@ export default class FileTitleUpdaterPlugin extends Plugin {
                 folderPath === trimmed ||
                 folderPath.startsWith(trimmed + "/")
             ) {
-                return true;
+                return `folder: ${trimmed}`;
             }
         }
 
@@ -372,7 +372,7 @@ export default class FileTitleUpdaterPlugin extends Plugin {
             if (!trimmed) continue;
             try {
                 if (new RegExp(trimmed).test(folderPath)) {
-                    return true;
+                    return `folder pattern: ${trimmed}`;
                 }
             } catch (e) {
                 console.error(
@@ -388,7 +388,7 @@ export default class FileTitleUpdaterPlugin extends Plugin {
             if (!trimmed) continue;
             try {
                 if (new RegExp(trimmed).test(file.basename)) {
-                    return true;
+                    return `file pattern: ${trimmed}`;
                 }
             } catch (e) {
                 console.error(
@@ -398,7 +398,11 @@ export default class FileTitleUpdaterPlugin extends Plugin {
             }
         }
 
-        return false;
+        return null;
+    }
+
+    isFileExcluded(file: TFile): boolean {
+        return this.getFileExclusionReason(file) !== null;
     }
 
     async syncTitles(source: TitleSource) {
@@ -408,9 +412,10 @@ export default class FileTitleUpdaterPlugin extends Plugin {
             return;
         }
 
-        if (this.isFileExcluded(activeFile)) {
+        const exclusionReason = this.getFileExclusionReason(activeFile);
+        if (exclusionReason !== null) {
             this.notificationHelper.showInfo(
-                "This file is excluded from sync",
+                `This file is excluded from sync (${exclusionReason})`,
             );
             return;
         }
