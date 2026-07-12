@@ -685,13 +685,13 @@ export default class FileTitleUpdaterPlugin extends Plugin {
                 const shouldUpdateFrontmatter = this.shouldSyncFrontmatter();
                 const shouldUpdateHeading = this.shouldSyncHeading();
                 if (
-                    !(await this.willUpdateAnything(
+                    await this.shouldSkipSanitizeWarning(
                         file,
                         sanitizedTitle,
                         shouldUpdateFilename,
                         shouldUpdateFrontmatter,
                         shouldUpdateHeading,
-                    ))
+                    )
                 ) {
                     return;
                 }
@@ -705,14 +705,14 @@ export default class FileTitleUpdaterPlugin extends Plugin {
                 const shouldUpdateFrontmatter = this.shouldSyncFrontmatter();
                 const shouldUpdateHeading = this.shouldSyncHeading();
                 if (
-                    !(await this.willUpdateAnything(
+                    await this.shouldSkipSanitizeWarning(
                         file,
                         title,
                         shouldUpdateFilename,
                         shouldUpdateFrontmatter,
                         shouldUpdateHeading,
                         sanitizedTitle,
-                    ))
+                    )
                 ) {
                     return;
                 }
@@ -762,13 +762,13 @@ export default class FileTitleUpdaterPlugin extends Plugin {
                 const shouldUpdateFrontmatter = this.shouldSyncFrontmatter();
                 const shouldUpdateHeading = this.shouldSyncHeading();
                 if (
-                    !(await this.willUpdateAnything(
+                    await this.shouldSkipSanitizeWarning(
                         file,
                         sanitizedTitle,
                         shouldUpdateFilename,
                         shouldUpdateFrontmatter,
                         shouldUpdateHeading,
-                    ))
+                    )
                 ) {
                     return;
                 }
@@ -782,14 +782,14 @@ export default class FileTitleUpdaterPlugin extends Plugin {
                 const shouldUpdateFrontmatter = this.shouldSyncFrontmatter();
                 const shouldUpdateHeading = this.shouldSyncHeading();
                 if (
-                    !(await this.willUpdateAnything(
+                    await this.shouldSkipSanitizeWarning(
                         file,
                         title,
                         shouldUpdateFilename,
                         shouldUpdateFrontmatter,
                         shouldUpdateHeading,
                         sanitizedTitle,
-                    ))
+                    )
                 ) {
                     return;
                 }
@@ -958,7 +958,7 @@ export default class FileTitleUpdaterPlugin extends Plugin {
         }
     }
 
-    async willUpdateFrontmatterOrHeading(
+    async willModifyFileContent(
         file: TFile,
         title: string,
         shouldUpdateFrontmatter: boolean,
@@ -982,11 +982,11 @@ export default class FileTitleUpdaterPlugin extends Plugin {
 
     async willUpdateAnything(
         file: TFile,
-        frontmatterOrHeadingTitle: string,
+        title: string,
         shouldUpdateFilename: boolean,
         shouldUpdateFrontmatter: boolean,
         shouldUpdateHeading: boolean,
-        filenameTitle = frontmatterOrHeadingTitle,
+        filenameTitle = title,
     ): Promise<boolean> {
         const willUpdateFilename =
             shouldUpdateFilename && file.basename !== filenameTitle;
@@ -994,12 +994,30 @@ export default class FileTitleUpdaterPlugin extends Plugin {
             return true;
         }
 
-        return await this.willUpdateFrontmatterOrHeading(
+        return await this.willModifyFileContent(
             file,
-            frontmatterOrHeadingTitle,
+            title,
             shouldUpdateFrontmatter,
             shouldUpdateHeading,
         );
+    }
+
+    async shouldSkipSanitizeWarning(
+        file: TFile,
+        title: string,
+        shouldUpdateFilename: boolean,
+        shouldUpdateFrontmatter: boolean,
+        shouldUpdateHeading: boolean,
+        filenameTitle = title,
+    ): Promise<boolean> {
+        return !(await this.willUpdateAnything(
+            file,
+            title,
+            shouldUpdateFilename,
+            shouldUpdateFrontmatter,
+            shouldUpdateHeading,
+            filenameTitle,
+        ));
     }
 
     // For backward compatibility
