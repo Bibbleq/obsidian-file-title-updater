@@ -481,10 +481,7 @@ export default class FileTitleUpdaterPlugin extends Plugin {
                     break;
             }
         } catch (error) {
-            console.error(
-                `Error during auto-sync for ${file.path}:`,
-                error,
-            );
+            console.error(`Error during auto-sync for ${file.path}:`, error);
         }
     }
 
@@ -592,7 +589,11 @@ export default class FileTitleUpdaterPlugin extends Plugin {
         // Recursively traverse the folder and collect all markdown files
         const traverse = (currentFolder: TFolder) => {
             for (const child of currentFolder.children) {
-                if (child instanceof TFile && child.extension === "md" && !this.isFileExcluded(child)) {
+                if (
+                    child instanceof TFile &&
+                    child.extension === "md" &&
+                    !this.isFileExcluded(child)
+                ) {
                     markdownFiles.push(child);
                 } else if (child instanceof TFolder) {
                     traverse(child);
@@ -672,41 +673,7 @@ export default class FileTitleUpdaterPlugin extends Plugin {
 
         const title = frontmatter[titleField];
 
-        // When syncing from frontmatter to filename, we need to sanitize the title
-        // for illegal characters that aren't allowed in filenames
-        const sanitizedTitle = this.sanitizeFilename(title);
-
-        // Check if sanitization changed the title
-        if (sanitizedTitle !== title) {
-            // If we should update all titles with the sanitized version
-            if (this.settings.updateOtherTitlesWithSanitizedVersion) {
-                this.notificationHelper.showInfo(
-                    `Title contains illegal characters. All titles will be updated with the sanitized version: "${sanitizedTitle}"`,
-                );
-                await this.updateTitlesBasedOnSyncMode(file, sanitizedTitle);
-            } else {
-                this.notificationHelper.showInfo(
-                    `Title contains illegal characters. Filename will be sanitized to: "${sanitizedTitle}"`,
-                );
-                // Only update filename with sanitized version if it's part of sync mode
-                const shouldUpdateFilename =
-                    this.settings.syncMode !== SyncMode.FRONTMATTER_HEADING;
-                const shouldUpdateFrontmatter = this.shouldSyncFrontmatter();
-                const shouldUpdateHeading = this.shouldSyncHeading();
-
-                if (shouldUpdateFilename) {
-                    await this.updateFilename(file, sanitizedTitle);
-                }
-
-                // Keep original in frontmatter and/or heading if they should be synced
-                if (shouldUpdateFrontmatter || shouldUpdateHeading) {
-                    await this.updateFrontmatterAndOrHeading(file, title);
-                }
-            }
-        } else {
-            // No illegal characters, proceed normally
-            await this.updateTitlesBasedOnSyncMode(file, title);
-        }
+        await this.syncFromTitleAndSanitize(file, title);
     }
 
     async syncFromHeading(file: TFile) {
@@ -721,30 +688,55 @@ export default class FileTitleUpdaterPlugin extends Plugin {
             );
         }
 
-        const title = headingTitle;
+        await this.syncFromTitleAndSanitize(file, headingTitle);
+    }
 
-        // When syncing from heading to filename, we need to sanitize the title
+    async syncFromTitleAndSanitize(file: TFile, title: string) {
+        // When syncing from frontmatter to filename, we need to sanitize the title
         // for illegal characters that aren't allowed in filenames
         const sanitizedTitle = this.sanitizeFilename(title);
+        const shouldUpdateFilename = this.shouldSyncFilename();
+        const shouldUpdateFrontmatter = this.shouldSyncFrontmatter();
+        const shouldUpdateHeading = this.shouldSyncHeading();
 
         // Check if sanitization changed the title
         if (sanitizedTitle !== title) {
             // If we should update all titles with the sanitized version
             if (this.settings.updateOtherTitlesWithSanitizedVersion) {
+                if (
+                    await this.shouldSkipSanitizeWarning(
+                        file,
+                        sanitizedTitle,
+                        shouldUpdateFilename,
+                        shouldUpdateFrontmatter,
+                        shouldUpdateHeading,
+                    )
+                ) {
+                    return;
+                }
+
                 this.notificationHelper.showInfo(
                     `Title contains illegal characters. All titles will be updated with the sanitized version: "${sanitizedTitle}"`,
                 );
                 await this.updateTitlesBasedOnSyncMode(file, sanitizedTitle);
             } else {
+                if (
+                    await this.shouldSkipSanitizeWarning(
+                        file,
+                        title,
+                        shouldUpdateFilename,
+                        shouldUpdateFrontmatter,
+                        shouldUpdateHeading,
+                        sanitizedTitle,
+                    )
+                ) {
+                    return;
+                }
+
                 this.notificationHelper.showInfo(
                     `Title contains illegal characters. Filename will be sanitized to: "${sanitizedTitle}"`,
                 );
                 // Only update filename with sanitized version if it's part of sync mode
-                const shouldUpdateFilename =
-                    this.settings.syncMode !== SyncMode.FRONTMATTER_HEADING;
-                const shouldUpdateFrontmatter = this.shouldSyncFrontmatter();
-                const shouldUpdateHeading = this.shouldSyncHeading();
-
                 if (shouldUpdateFilename) {
                     await this.updateFilename(file, sanitizedTitle);
                 }
@@ -903,6 +895,80 @@ export default class FileTitleUpdaterPlugin extends Plugin {
         if (oldText !== newText) {
             await this.app.vault.modify(file, newText);
         }
+    }
+
+    /**
+     * Returns true when syncing frontmatter and/or heading would modify the file body.
+     * Returns false when neither frontmatter nor heading sync is enabled.
+     */
+    async willModifyFileContent(
+        file: TFile,
+        title: string,
+        shouldUpdateFrontmatter: boolean,
+        shouldUpdateHeading: boolean,
+    ): Promise<boolean> {
+        if (!shouldUpdateFrontmatter && !shouldUpdateHeading) {
+            return false;
+        }
+
+        const oldText = await this.app.vault.read(file);
+        const newText = this.updateFileContents(
+            oldText,
+            title,
+            file,
+            shouldUpdateFrontmatter,
+            shouldUpdateHeading,
+        );
+
+        return oldText !== newText;
+    }
+
+    /**
+     * Returns true when syncing would modify filename and/or file content.
+     * `filenameTitle` lets callers compare filename changes against a different target.
+     */
+    async willUpdateAnything(
+        file: TFile,
+        title: string,
+        shouldUpdateFilename: boolean,
+        shouldUpdateFrontmatter: boolean,
+        shouldUpdateHeading: boolean,
+        filenameTitle = title,
+    ): Promise<boolean> {
+        const willUpdateFilename =
+            shouldUpdateFilename && file.basename !== filenameTitle;
+        if (willUpdateFilename) {
+            return true;
+        }
+
+        return await this.willModifyFileContent(
+            file,
+            title,
+            shouldUpdateFrontmatter,
+            shouldUpdateHeading,
+        );
+    }
+
+    /**
+     * Returns true when a sanitize warning should be suppressed because no sync changes would occur.
+     * `filenameTitle` lets callers evaluate filename changes with a sanitized variant.
+     */
+    async shouldSkipSanitizeWarning(
+        file: TFile,
+        title: string,
+        shouldUpdateFilename: boolean,
+        shouldUpdateFrontmatter: boolean,
+        shouldUpdateHeading: boolean,
+        filenameTitle = title,
+    ): Promise<boolean> {
+        return !(await this.willUpdateAnything(
+            file,
+            title,
+            shouldUpdateFilename,
+            shouldUpdateFrontmatter,
+            shouldUpdateHeading,
+            filenameTitle,
+        ));
     }
 
     // For backward compatibility
