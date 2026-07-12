@@ -673,67 +673,7 @@ export default class FileTitleUpdaterPlugin extends Plugin {
 
         const title = frontmatter[titleField];
 
-        // When syncing from frontmatter to filename, we need to sanitize the title
-        // for illegal characters that aren't allowed in filenames
-        const sanitizedTitle = this.sanitizeFilename(title);
-
-        // Check if sanitization changed the title
-        if (sanitizedTitle !== title) {
-            // If we should update all titles with the sanitized version
-            if (this.settings.updateOtherTitlesWithSanitizedVersion) {
-                const shouldUpdateFilename = this.shouldSyncFilename();
-                const shouldUpdateFrontmatter = this.shouldSyncFrontmatter();
-                const shouldUpdateHeading = this.shouldSyncHeading();
-                if (
-                    await this.shouldSkipSanitizeWarning(
-                        file,
-                        sanitizedTitle,
-                        shouldUpdateFilename,
-                        shouldUpdateFrontmatter,
-                        shouldUpdateHeading,
-                    )
-                ) {
-                    return;
-                }
-
-                this.notificationHelper.showInfo(
-                    `Title contains illegal characters. All titles will be updated with the sanitized version: "${sanitizedTitle}"`,
-                );
-                await this.updateTitlesBasedOnSyncMode(file, sanitizedTitle);
-            } else {
-                const shouldUpdateFilename = this.shouldSyncFilename();
-                const shouldUpdateFrontmatter = this.shouldSyncFrontmatter();
-                const shouldUpdateHeading = this.shouldSyncHeading();
-                if (
-                    await this.shouldSkipSanitizeWarning(
-                        file,
-                        title,
-                        shouldUpdateFilename,
-                        shouldUpdateFrontmatter,
-                        shouldUpdateHeading,
-                        sanitizedTitle,
-                    )
-                ) {
-                    return;
-                }
-
-                this.notificationHelper.showInfo(
-                    `Title contains illegal characters. Filename will be sanitized to: "${sanitizedTitle}"`,
-                );
-                // Only update filename with sanitized version if it's part of sync mode
-                if (shouldUpdateFilename) {
-                    await this.updateFilename(file, sanitizedTitle);
-                }
-
-                // Keep original in frontmatter and/or heading if they should be synced
-                if (shouldUpdateFrontmatter || shouldUpdateHeading) {
-                    await this.updateFrontmatterAndOrHeading(file, title);
-                }
-            }
-        } else {
-            // No illegal characters, proceed normally
-            await this.updateTitlesBasedOnSyncMode(file, title);
-        }
+        await this.syncFromTitleWithSanitization(file, title);
     }
 
     async syncFromHeading(file: TFile) {
@@ -748,9 +688,11 @@ export default class FileTitleUpdaterPlugin extends Plugin {
             );
         }
 
-        const title = headingTitle;
+        await this.syncFromTitleWithSanitization(file, headingTitle);
+    }
 
-        // When syncing from heading to filename, we need to sanitize the title
+    async syncFromTitleWithSanitization(file: TFile, title: string) {
+        // When syncing from frontmatter to filename, we need to sanitize the title
         // for illegal characters that aren't allowed in filenames
         const sanitizedTitle = this.sanitizeFilename(title);
 
