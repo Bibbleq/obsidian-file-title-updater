@@ -684,17 +684,15 @@ export default class FileTitleUpdaterPlugin extends Plugin {
                 const shouldUpdateFilename = this.shouldSyncFilename();
                 const shouldUpdateFrontmatter = this.shouldSyncFrontmatter();
                 const shouldUpdateHeading = this.shouldSyncHeading();
-                const willUpdateFilename =
-                    shouldUpdateFilename && file.basename !== sanitizedTitle;
-                const willUpdateFrontmatterOrHeading =
-                    await this.willUpdateFrontmatterOrHeading(
+                if (
+                    !(await this.willUpdateAnything(
                         file,
                         sanitizedTitle,
+                        shouldUpdateFilename,
                         shouldUpdateFrontmatter,
                         shouldUpdateHeading,
-                    );
-
-                if (!willUpdateFilename && !willUpdateFrontmatterOrHeading) {
+                    ))
+                ) {
                     return;
                 }
 
@@ -703,21 +701,19 @@ export default class FileTitleUpdaterPlugin extends Plugin {
                 );
                 await this.updateTitlesBasedOnSyncMode(file, sanitizedTitle);
             } else {
-                const shouldUpdateFilename =
-                    this.settings.syncMode !== SyncMode.FRONTMATTER_HEADING;
+                const shouldUpdateFilename = this.shouldSyncFilename();
                 const shouldUpdateFrontmatter = this.shouldSyncFrontmatter();
                 const shouldUpdateHeading = this.shouldSyncHeading();
-                const willUpdateFilename =
-                    shouldUpdateFilename && file.basename !== sanitizedTitle;
-                const willUpdateFrontmatterOrHeading =
-                    await this.willUpdateFrontmatterOrHeading(
+                if (
+                    !(await this.willUpdateAnything(
                         file,
                         title,
+                        shouldUpdateFilename,
                         shouldUpdateFrontmatter,
                         shouldUpdateHeading,
-                    );
-
-                if (!willUpdateFilename && !willUpdateFrontmatterOrHeading) {
+                        sanitizedTitle,
+                    ))
+                ) {
                     return;
                 }
 
@@ -765,17 +761,15 @@ export default class FileTitleUpdaterPlugin extends Plugin {
                 const shouldUpdateFilename = this.shouldSyncFilename();
                 const shouldUpdateFrontmatter = this.shouldSyncFrontmatter();
                 const shouldUpdateHeading = this.shouldSyncHeading();
-                const willUpdateFilename =
-                    shouldUpdateFilename && file.basename !== sanitizedTitle;
-                const willUpdateFrontmatterOrHeading =
-                    await this.willUpdateFrontmatterOrHeading(
+                if (
+                    !(await this.willUpdateAnything(
                         file,
                         sanitizedTitle,
+                        shouldUpdateFilename,
                         shouldUpdateFrontmatter,
                         shouldUpdateHeading,
-                    );
-
-                if (!willUpdateFilename && !willUpdateFrontmatterOrHeading) {
+                    ))
+                ) {
                     return;
                 }
 
@@ -784,21 +778,19 @@ export default class FileTitleUpdaterPlugin extends Plugin {
                 );
                 await this.updateTitlesBasedOnSyncMode(file, sanitizedTitle);
             } else {
-                const shouldUpdateFilename =
-                    this.settings.syncMode !== SyncMode.FRONTMATTER_HEADING;
+                const shouldUpdateFilename = this.shouldSyncFilename();
                 const shouldUpdateFrontmatter = this.shouldSyncFrontmatter();
                 const shouldUpdateHeading = this.shouldSyncHeading();
-                const willUpdateFilename =
-                    shouldUpdateFilename && file.basename !== sanitizedTitle;
-                const willUpdateFrontmatterOrHeading =
-                    await this.willUpdateFrontmatterOrHeading(
+                if (
+                    !(await this.willUpdateAnything(
                         file,
                         title,
+                        shouldUpdateFilename,
                         shouldUpdateFrontmatter,
                         shouldUpdateHeading,
-                    );
-
-                if (!willUpdateFilename && !willUpdateFrontmatterOrHeading) {
+                        sanitizedTitle,
+                    ))
+                ) {
                     return;
                 }
 
@@ -986,6 +978,28 @@ export default class FileTitleUpdaterPlugin extends Plugin {
         );
 
         return oldText !== newText;
+    }
+
+    async willUpdateAnything(
+        file: TFile,
+        frontmatterOrHeadingTitle: string,
+        shouldUpdateFilename: boolean,
+        shouldUpdateFrontmatter: boolean,
+        shouldUpdateHeading: boolean,
+        filenameTitle = frontmatterOrHeadingTitle,
+    ): Promise<boolean> {
+        const willUpdateFilename =
+            shouldUpdateFilename && file.basename !== filenameTitle;
+        if (willUpdateFilename) {
+            return true;
+        }
+
+        return await this.willUpdateFrontmatterOrHeading(
+            file,
+            frontmatterOrHeadingTitle,
+            shouldUpdateFrontmatter,
+            shouldUpdateHeading,
+        );
     }
 
     // For backward compatibility
