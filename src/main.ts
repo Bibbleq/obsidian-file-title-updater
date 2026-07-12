@@ -695,14 +695,14 @@ export default class FileTitleUpdaterPlugin extends Plugin {
         // When syncing from frontmatter to filename, we need to sanitize the title
         // for illegal characters that aren't allowed in filenames
         const sanitizedTitle = this.sanitizeFilename(title);
+        const shouldUpdateFilename = this.shouldSyncFilename();
+        const shouldUpdateFrontmatter = this.shouldSyncFrontmatter();
+        const shouldUpdateHeading = this.shouldSyncHeading();
 
         // Check if sanitization changed the title
         if (sanitizedTitle !== title) {
             // If we should update all titles with the sanitized version
             if (this.settings.updateOtherTitlesWithSanitizedVersion) {
-                const shouldUpdateFilename = this.shouldSyncFilename();
-                const shouldUpdateFrontmatter = this.shouldSyncFrontmatter();
-                const shouldUpdateHeading = this.shouldSyncHeading();
                 if (
                     await this.shouldSkipSanitizeWarning(
                         file,
@@ -720,9 +720,6 @@ export default class FileTitleUpdaterPlugin extends Plugin {
                 );
                 await this.updateTitlesBasedOnSyncMode(file, sanitizedTitle);
             } else {
-                const shouldUpdateFilename = this.shouldSyncFilename();
-                const shouldUpdateFrontmatter = this.shouldSyncFrontmatter();
-                const shouldUpdateHeading = this.shouldSyncHeading();
                 if (
                     await this.shouldSkipSanitizeWarning(
                         file,
@@ -902,6 +899,7 @@ export default class FileTitleUpdaterPlugin extends Plugin {
 
     /**
      * Returns true when syncing frontmatter and/or heading would modify the file body.
+     * Returns false when neither frontmatter nor heading sync is enabled.
      */
     async willModifyFileContent(
         file: TFile,
