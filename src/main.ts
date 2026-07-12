@@ -673,7 +673,7 @@ export default class FileTitleUpdaterPlugin extends Plugin {
 
         const title = frontmatter[titleField];
 
-        await this.syncFromTitleWithSanitization(file, title);
+        await this.syncFromTitleAndSanitize(file, title);
     }
 
     async syncFromHeading(file: TFile) {
@@ -688,10 +688,10 @@ export default class FileTitleUpdaterPlugin extends Plugin {
             );
         }
 
-        await this.syncFromTitleWithSanitization(file, headingTitle);
+        await this.syncFromTitleAndSanitize(file, headingTitle);
     }
 
-    async syncFromTitleWithSanitization(file: TFile, title: string) {
+    async syncFromTitleAndSanitize(file: TFile, title: string) {
         // When syncing from frontmatter to filename, we need to sanitize the title
         // for illegal characters that aren't allowed in filenames
         const sanitizedTitle = this.sanitizeFilename(title);
@@ -900,6 +900,9 @@ export default class FileTitleUpdaterPlugin extends Plugin {
         }
     }
 
+    /**
+     * Returns true when syncing frontmatter and/or heading would modify the file body.
+     */
     async willModifyFileContent(
         file: TFile,
         title: string,
@@ -922,6 +925,10 @@ export default class FileTitleUpdaterPlugin extends Plugin {
         return oldText !== newText;
     }
 
+    /**
+     * Returns true when syncing would modify filename and/or file content.
+     * `filenameTitle` lets callers compare filename changes against a different target.
+     */
     async willUpdateAnything(
         file: TFile,
         title: string,
@@ -944,6 +951,10 @@ export default class FileTitleUpdaterPlugin extends Plugin {
         );
     }
 
+    /**
+     * Returns true when a sanitize warning should be suppressed because no sync changes would occur.
+     * `filenameTitle` lets callers evaluate filename changes with a sanitized variant.
+     */
     async shouldSkipSanitizeWarning(
         file: TFile,
         title: string,
